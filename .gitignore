@@ -1,0 +1,5 @@
+# Ham veri asla repoya girmez
+*.xlsx
+*.xls
+*.csv
+__pycache__/

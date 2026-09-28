@@ -17,6 +17,7 @@ kullanıcı yoğunluğu endeksi görüntülenir.
 | `index.html` | Harita arayüzü (HTML + CSS + JS, harici kütüphane yok) |
 | `data/atlas.json` | İl bazındaki oranlar — sayfa açılışta bu dosyayı okur |
 | `embed-ornek.html` | Siteye gömme kodunun çalışan örneği |
+| `atlas_uret.py` | Ham Excel'den `data/atlas.json` üreten script |
 
 ## Siteye ekleme
 
@@ -58,8 +59,31 @@ Web ekibi iframe yerine dosyaları kendi sunucusuna almak isterse
 - `density` — kullanıcı yoğunluğu endeksi (en yoğun il = 100).
 - `limited` — kullanıcı sayısı az olan iller (oranlar daha oynak).
 
-**Veri güncellemek için** sadece `data/atlas.json` dosyasını aynı yapıda
-yenisiyle değiştirmek yeterli. Site birkaç dakika içinde yenilenir.
+## Veri güncelleme (ham Excel → oranlar)
+
+Ham Excel **asla repoya yüklenmez** (`.gitignore` `*.xlsx`/`*.csv`'yi engeller).
+Oranlar bilgisayarda üretilir, repoya sadece `data/atlas.json` gider:
+
+```bash
+pip install pandas openpyxl
+python atlas_uret.py il_gu_nvl.xlsx      # -> data/atlas.json
+```
+
+Beklenen Excel sütunları: `il, il_toplam_kisi, coin, kisi_sayisi, yogunluk_yuzde, toplam_deger_tl`
+
+| Alan | Formül |
+|---|---|
+| `users` | `kisi_sayisi / il_toplam_kisi × 100` |
+| `value` | coinin TL değeri / ildeki tüm coinlerin TL toplamı × 100 |
+| `density` | `100 × ln(il_toplam_kisi) / ln(en kalabalık il)` |
+| `limited` | `il_toplam_kisi < 10` (`LIMITED_ESIK`) |
+| Türkiye geneli | tüm iller toplanarak aynı formüller |
+
+Script, çıktıyı yazmadan önce içinde 0–100 dışında bir sayı ya da izinsiz
+bir alan (kişi sayısı, TL tutarı) kalmadığını kontrol eder; kalırsa hata
+verir. Sonra GitHub'da `data/` → *Add file → Upload files* ile yeni
+`atlas.json` yüklenir; site birkaç dakika içinde yenilenir. Sayfadaki
+hikâye kartlarındaki oranlar (Ankara BTC, İzmir ETH) da otomatik güncellenir.
 
 ## ⚠️ Notlar
 
