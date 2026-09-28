@@ -16,7 +16,7 @@ HESAPLAMALAR (sitedeki "Bu harita ne anlatıyor?" metniyle aynı)
     users   = kisi_sayisi / il_toplam_kisi * 100
               -> ildeki kullanıcıların yüzde kaçı o varlığı tutuyor
     value   = coinin TL değeri / ildeki tüm coinlerin toplam TL değeri * 100
-    density = 100 * ln(il_toplam_kisi) / ln(en kalabalık ilin il_toplam_kisi)
+    density = 100 * ln(il_toplam_kisi + 1) / ln(en kalabalık ilin il_toplam_kisi + 1)
               -> en yoğun il = 100 olan göreli endeks (log ölçek)
     limited = il_toplam_kisi < LIMITED_ESIK  (sitede "oranlar oynak" notu çıkar)
     "Türkiye geneli" = tüm illerin toplamı üzerinden aynı formüller
@@ -45,10 +45,12 @@ def coin_adi(kod):
     return kod[:-3] if kod.endswith("TRY") else kod
 
 
-def il_blogu(grup, toplam_kisi, yogunluk, limited):
+def il_blogu(grup, toplam_kisi, yogunluk, limited, sirala=True):
     toplam_tl = grup["toplam_deger_tl"].sum()
     coins = {}
-    for _, r in grup.sort_values(["kisi_sayisi", "toplam_deger_tl"], ascending=False).iterrows():
+    if sirala:
+        grup = grup.sort_values("kisi_sayisi", ascending=False, kind="stable")
+    for _, r in grup.iterrows():
         coins[r["c"]] = {
             "users": yuzde(r["kisi_sayisi"], toplam_kisi),
             "value": yuzde(r["toplam_deger_tl"], toplam_tl),
@@ -76,22 +78,22 @@ def main(yol):
     df = df.dropna(subset=["il", "coin"]).copy()
     df["il"] = df["il"].astype(str).str.strip()
     df["c"] = df["coin"].map(coin_adi)
-    df = df.groupby(["il", "c"], as_index=False).agg(
+    df = df.groupby(["il", "c"], as_index=False, sort=False).agg(
         il_toplam_kisi=("il_toplam_kisi", "first"),
         kisi_sayisi=("kisi_sayisi", "sum"),
         toplam_deger_tl=("toplam_deger_tl", "sum"),
     )
 
-    il_kisi = df.groupby("il")["il_toplam_kisi"].first().sort_values(ascending=False)
-    ln_max = math.log(il_kisi.max())
+    il_kisi = df.groupby("il", sort=False)["il_toplam_kisi"].first()  # Excel'deki il sırası korunur
+    ln_max = math.log1p(il_kisi.max())
 
     veri = {}
     for il, kisi in il_kisi.items():
-        yog = round(100 * math.log(kisi) / ln_max, 1) if kisi > 1 else 0.0
+        yog = round(100 * math.log1p(kisi) / ln_max, 1)
         veri[il] = il_blogu(df[df["il"] == il], kisi, yog, kisi < LIMITED_ESIK)
 
-    tr = df.groupby("c", as_index=False)[["kisi_sayisi", "toplam_deger_tl"]].sum()
-    veri["Türkiye geneli"] = il_blogu(tr, il_kisi.sum(), 100.0, False)
+    tr = df.groupby("c", as_index=False, sort=False)[["kisi_sayisi", "toplam_deger_tl"]].sum()
+    veri["Türkiye geneli"] = il_blogu(tr, il_kisi.sum(), 100.0, False, sirala=False)
 
     guvenlik_kontrolu(veri)
     CIKTI.parent.mkdir(exist_ok=True)

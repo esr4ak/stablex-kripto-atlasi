@@ -75,7 +75,7 @@ Beklenen Excel sütunları: `il, il_toplam_kisi, coin, kisi_sayisi, yogunluk_yuz
 |---|---|
 | `users` | `kisi_sayisi / il_toplam_kisi × 100` |
 | `value` | coinin TL değeri / ildeki tüm coinlerin TL toplamı × 100 |
-| `density` | `100 × ln(il_toplam_kisi) / ln(en kalabalık il)` |
+| `density` | `100 × ln(il_toplam_kisi + 1) / ln(en kalabalık il + 1)` |
 | `limited` | `il_toplam_kisi < 10` (`LIMITED_ESIK`) |
 | Türkiye geneli | tüm iller toplanarak aynı formüller |
 
